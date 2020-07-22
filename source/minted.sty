@@ -70,6 +70,7 @@
   \@namedef{minted@outputdir}{#1/}%
   \StrSubstitute{\minted@outputdir}{/}%
     {\@backslashchar}[\minted@outputdir@windows]}
+\DeclareBoolOption[false]{reduceshellescape}
 \DeclareBoolOption{kpsewhich}
 \DeclareBoolOption{langlinenos}
 \DeclareBoolOption{draft}
@@ -97,6 +98,9 @@
    {}%
    {\AtEndOfPackage{\ProvideDirectory{\minted@outputdir\minted@cachedir}}}}%
  {}
+\ifthenelse{\boolean{minted@reduceshellescape}}
+  {\def\minted@cachedir{.}}
+  {}
 \newcommand{\minted@input}[1]{%
   \IfFileExists{#1}%
    {\input{#1}}%
@@ -152,54 +156,68 @@
    {\AtEndDocument{%
     \minted@savecachelist
     \minted@cleancache}}}%
-\ifwindows
-  \providecommand{\DeleteFile}[2][]{%
-    \ifthenelse{\equal{#1}{}}%
-      {\IfFileExists{#2}{\ShellEscape{del #2}}{}}%
-      {\IfFileExists{#1/#2}{%
+\ifthenelse{\boolean{minted@reduceshellescape}}
+  {%
+    \providecommand{\DeleteFile}[2][]{}%
+    \let\ProvideDirectory\@gobble
+  }
+  {%
+    \ifwindows
+      \providecommand{\DeleteFile}[2][]{%
+        \ifthenelse{\equal{#1}{}}%
+          {\IfFileExists{#2}{\ShellEscape{del #2}}{}}%
+          {\IfFileExists{#1/#2}{%
+            \StrSubstitute{#1}{/}{\@backslashchar}[\minted@windir]
+            \ShellEscape{del \minted@windir\@backslashchar #2}}{}}}
+    \else
+      \providecommand{\DeleteFile}[2][]{%
+        \ifthenelse{\equal{#1}{}}%
+          {\IfFileExists{#2}{\ShellEscape{rm #2}}{}}%
+          {\IfFileExists{#1/#2}{\ShellEscape{rm #1/#2}}{}}}
+    \fi
+    \ifwindows
+      \newcommand{\ProvideDirectory}[1]{%
         \StrSubstitute{#1}{/}{\@backslashchar}[\minted@windir]
-        \ShellEscape{del \minted@windir\@backslashchar #2}}{}}}
-\else
-  \providecommand{\DeleteFile}[2][]{%
-    \ifthenelse{\equal{#1}{}}%
-      {\IfFileExists{#2}{\ShellEscape{rm #2}}{}}%
-      {\IfFileExists{#1/#2}{\ShellEscape{rm #1/#2}}{}}}
-\fi
-\ifwindows
-  \newcommand{\ProvideDirectory}[1]{%
-    \StrSubstitute{#1}{/}{\@backslashchar}[\minted@windir]
-    \ShellEscape{if not exist \minted@windir\space mkdir \minted@windir}}
-\else
-  \newcommand{\ProvideDirectory}[1]{%
-    \ShellEscape{mkdir -p #1}}
-\fi
+        \ShellEscape{if not exist \minted@windir\space mkdir \minted@windir}}
+    \else
+      \newcommand{\ProvideDirectory}[1]{%
+        \ShellEscape{mkdir -p #1}}
+    \fi
+  }
 \newboolean{AppExists}
 \newread\minted@appexistsfile
-\newcommand{\TestAppExists}[1]{
-  \ifwindows
-    \DeleteFile{\minted@jobname.aex}
-    \ShellEscape{for \string^\@percentchar i in (#1.exe #1.bat #1.cmd)
-      do set > \minted@jobname.aex <nul: /p
-      x=\string^\@percentchar \string~$PATH:i>> \minted@jobname.aex}
-    %$ <- balance syntax highlighting
-    \immediate\openin\minted@appexistsfile\minted@jobname.aex
-    \expandafter\def\expandafter\@tmp@cr\expandafter{\the\endlinechar}
-    \endlinechar=-1\relax
-    \readline\minted@appexistsfile to \minted@apppathifexists
-    \endlinechar=\@tmp@cr
-    \ifthenelse{\equal{\minted@apppathifexists}{}}
-     {\AppExistsfalse}
-     {\AppExiststrue}
-    \immediate\closein\minted@appexistsfile
-    \DeleteFile{\minted@jobname.aex}
-  \else
-    \ShellEscape{which #1 && touch \minted@jobname.aex}
-    \IfFileExists{\minted@jobname.aex}
-      {\AppExiststrue
-        \DeleteFile{\minted@jobname.aex}}
-      {\AppExistsfalse}
-  \fi
-}
+\ifthenelse{\boolean{minted@reduceshellescape}}
+  {%
+    \let\TestAppExists\@gobble
+    \AppExiststrue
+  }
+  {%
+    \newcommand{\TestAppExists}[1]{
+      \ifwindows
+        \DeleteFile{\minted@jobname.aex}
+        \ShellEscape{for \string^\@percentchar i in (#1.exe #1.bat #1.cmd)
+          do set > \minted@jobname.aex <nul: /p
+          x=\string^\@percentchar \string~$PATH:i>> \minted@jobname.aex}
+        %$ <- balance syntax highlighting
+        \immediate\openin\minted@appexistsfile\minted@jobname.aex
+        \expandafter\def\expandafter\@tmp@cr\expandafter{\the\endlinechar}
+        \endlinechar=-1\relax
+        \readline\minted@appexistsfile to \minted@apppathifexists
+        \endlinechar=\@tmp@cr
+        \ifthenelse{\equal{\minted@apppathifexists}{}}
+         {\AppExistsfalse}
+         {\AppExiststrue}
+        \immediate\closein\minted@appexistsfile
+        \DeleteFile{\minted@jobname.aex}
+      \else
+        \ShellEscape{which #1 && touch \minted@jobname.aex}
+        \IfFileExists{\minted@jobname.aex}
+          {\AppExiststrue
+            \DeleteFile{\minted@jobname.aex}}
+          {\AppExistsfalse}
+      \fi
+    }
+  }
 \newcommand{\minted@optlistcl@g}{}
 \newcommand{\minted@optlistcl@g@i}{}
 \let\minted@lang\@empty
@@ -1164,18 +1182,22 @@
 \providecommand{\listoflistings}{\listof{listing}{\listoflistingscaption}}
 \fi
 \AtEndOfPackage{%
-  \ifthenelse{\boolean{minted@draft}}%
-   {}%
-   {%
-    \ifthenelse{\boolean{minted@frozencache}}{}{%
-      \ifnum\pdf@shellescape=1\relax\else
-        \PackageError{minted}%
-         {You must invoke LaTeX with the
-          -shell-escape flag}%
-         {Pass the -shell-escape flag to LaTeX. Refer to the minted.sty
-          documentation for more information.}%
-      \fi}%
-   }%
+  \ifthenelse{\boolean{minted@reduceshellescape}}
+    {}
+    {%
+      \ifthenelse{\boolean{minted@draft}}%
+       {}%
+       {%
+        \ifthenelse{\boolean{minted@frozencache}}{}{%
+          \ifnum\pdf@shellescape=1\relax\else
+            \PackageError{minted}%
+             {You must invoke LaTeX with the
+              -shell-escape flag}%
+             {Pass the -shell-escape flag to LaTeX. Refer to the minted.sty
+              documentation for more information.}%
+          \fi}%
+       }%
+    }
 }
 \AtEndPreamble{%
   \ifthenelse{\boolean{minted@draft}}%
