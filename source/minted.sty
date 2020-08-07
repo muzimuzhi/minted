@@ -879,7 +879,8 @@
       \ifAppExists\else
         \TestAppExists{python3}%
         \ifAppExists
-          \edef\minted@pyexecutable{\detokenize{python3}}%
+          % should be global
+          \xdef\minted@pyexecutable{\detokenize{python3}}%
           \PackageInfo{minted}{Switch python execuable name to python3}%
         \else
           \PackageError{minted}
