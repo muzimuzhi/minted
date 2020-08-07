@@ -810,6 +810,7 @@
             \edef\minted@tmpfname@esc{\minted@outputdir\minted@jobname}%
             \StrSubstitute{\minted@tmpfname@esc}{\@backslashchar}{\@backslashchar\@backslashchar}[\minted@tmpfname@esc]%
             \StrSubstitute{\minted@tmpfname@esc}{"}{\@backslashchar"}[\minted@tmpfname@esc]%
+            \minted@check@pyexec
             %Cheating a little here by using ASCII codes to write `{` and `}`
             %in the Python code
             \def\minted@hashcmd{%
