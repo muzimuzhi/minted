@@ -52,6 +52,11 @@
 \DeclareVoidOption{chapter}{\def\minted@float@within{chapter}}
 \DeclareVoidOption{section}{\def\minted@float@within{section}}
 \DeclareBoolOption{newfloat}
+\edef\minted@pyexecutable@DEFAULT{\detokenize{python}}
+\let\minted@pyexecutable\minted@pyexecutable@DEFAULT
+\define@key{minted}{pyexecutable}{%
+  \edef\minted@pyexecutable{\detokenize{#1}}%
+}
 \DeclareBoolOption[true]{cache}
 \StrSubstitute{\jobname}{ }{_}[\minted@jobname]
 \StrSubstitute{\minted@jobname}{*}{_}[\minted@jobname]
@@ -175,7 +180,7 @@
 \fi
 \newboolean{AppExists}
 \newread\minted@appexistsfile
-\newcommand{\TestAppExists}[1]{
+\newcommand{\TestAppExists}[1]{%
   \ifwindows
     \DeleteFile{\minted@jobname.aex}
     \ShellEscape{for \string^\@percentchar i in (#1.exe #1.bat #1.cmd)
@@ -808,7 +813,7 @@
             %Cheating a little here by using ASCII codes to write `{` and `}`
             %in the Python code
             \def\minted@hashcmd{%
-              \detokenize{python -c "import hashlib; import os;
+              \minted@pyexecutable\detokenize{ -c "import hashlib; import os;
                 hasher = hashlib.sha1();
                 f = open(os.path.expanduser(os.path.expandvars(\"}\minted@tmpfname@esc.mintedcmd\detokenize{\")), \"rb\");
                 hasher.update(f.read());
@@ -864,7 +869,34 @@
       \ShellEscape{\minted@cmd}%
       \minted@inputpyg}%
 }
+\newif\ifminted@pyexec@checked
+\def\minted@check@pyexec{%
+  \ifminted@pyexec@checked
+  \else
+    \global\minted@pyexec@checkedtrue
+    \ifx\minted@pyexecutable\minted@pyexecutable@DEFAULT
+      \TestAppExists{\minted@pyexecutable}%
+      \ifAppExists\else
+        \TestAppExists{python3}%
+        \ifAppExists
+          \edef\minted@pyexecutable{\detokenize{python3}}%
+          \PackageInfo{minted}{Switch python execuable name to python3}%
+        \else
+          \PackageError{minted}
+            {Neither python nor python3 is on your path, option autogobble is unable to work.}
+            {Use package option "pyexecutable=<exec name>" to specify the executabe name of python on your computer.}%
+        \fi
+      \fi
+    \else
+      \TestAppExists{\minted@pyexecutable}%
+      \ifAppExists\else
+        \PackageError{minted}{Specified python excutable name "\minted@pyexecutable" does not exist.}{}%
+      \fi
+    \fi
+  \fi
+}
 \def\minted@autogobble#1{%
+  \minted@check@pyexec
   \edef\minted@argone@esc{#1}%
   \StrSubstitute{\minted@argone@esc}{\@backslashchar}{\@backslashchar\@backslashchar}[\minted@argone@esc]%
   \StrSubstitute{\minted@argone@esc}{"}{\@backslashchar"}[\minted@argone@esc]%
@@ -878,7 +910,7 @@
         \detokenize{for /f "usebackq tokens=*" }\@percentchar\detokenize{a in (`kpsewhich} #1\detokenize{`) do}\space
       \fi
     \fi
-    \detokenize{python -c "import sys; import os;
+    \minted@pyexecutable\detokenize{ -c "import sys; import os;
     import textwrap;
     from io import open;
     fname = }%
