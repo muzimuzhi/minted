@@ -508,16 +508,9 @@
                    \ifstrempty{#1}{default-pyg-prefix}{#1}.pygstyle}%
           \fi}%
         }%
-        \begingroup
-        \let\def\gdef
-        \catcode\string``=12
-        \catcode`\_=11
-        \catcode`\-=11
-        \catcode`\%=14
-        \endlinechar=-1\relax
-        \minted@input{%
-          \minted@outputdir\minted@cachedir/\ifstrempty{#1}{default-pyg-prefix}{#1}.pygstyle}%
-        \endgroup
+        \minted@input@catcode{%
+          \minted@outputdir\minted@cachedir/%
+          \ifstrempty{#1}{default-pyg-prefix}{#1}.pygstyle}%
         \minted@addcachefile{\ifstrempty{#1}{default-pyg-prefix}{#1}.pygstyle}}%
      {%
         \ifwindows
@@ -529,17 +522,24 @@
             \MintedPygmentize\space -S \ifstrempty{#1}{default}{#1} -f latex
             -P commandprefix=PYG#1 > \minted@outputdir\minted@jobname.out.pyg}%
         \fi
-        \begingroup
-        \let\def\gdef
-        \catcode\string``=12
-        \catcode`\_=11
-        \catcode`\-=11
-        \catcode`\%=14
-        \endlinechar=-1\relax
-        \minted@input{\minted@outputdir\minted@jobname.out.pyg}%
-        \endgroup}%
+        \minted@input@catcode{\minted@outputdir\minted@jobname.out.pyg}%
+      }%
     \ifstrempty{#1}{\minted@patch@PYGZsq}{}%
   \fi
+}
+\def\minted@input@catcode#1{%
+  \begingroup
+  \let\def\gdef
+  \begingroup
+  \catcode\string``=12
+  \catcode`\_=11
+  \catcode`\-=11
+  \catcode`\%=14
+  \endlinechar=-1\relax
+  \expandafter\endgroup
+  \expandafter\minted@input\expandafter{%
+    \expanded{#1}}%
+  \endgroup
 }
 \ifthenelse{\boolean{minted@draft}}{\renewcommand{\minted@checkstyle}[1]{}}{}
 \newcommand{\minted@patch@PYGZsq}{%
