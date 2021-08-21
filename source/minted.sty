@@ -480,6 +480,23 @@
     \@namedef{minted@opt@cmd:#2}{##1}}
   \ifstrempty{#1}{}{\@namedef{minted@opt@g:#2}{#1}}%
 }
+\newcommand\minted@checklexer[1]{%
+  \ShellEscape{python3 -c "%
+  from pygments.lexers import get_lexer_by_name;
+  from pygments.util import ClassNotFound;
+  % trick: python -c "stmt; stmt; exec('''<compound stmt>''')"
+  exec('''%
+    try:
+      get_lexer_by_name('#1')\@backslashchar n%
+    except ClassNotFound:\@backslashchar n%
+      \space\space with open('\minted@jobname.aex', 'w') as f:
+        f.write('')
+    ''')
+  "}%
+  \IfFileExists{\minted@jobname.aex}
+    {\def\minted@lexer{text}\DeleteFile{\minted@jobname.aex}}
+    {\def\minted@lexer{#1}}%
+}
 \newcommand{\minted@checkstyle}[1]{%
   \ifcsname minted@styleloaded@\ifstrempty{#1}{default-pyg-prefix}{#1}\endcsname\else
     \ifstrempty{#1}{}{\ifcsname PYG\endcsname\else\minted@checkstyle{}\fi}%
@@ -748,6 +765,7 @@
 \fi
 \newcounter{minted@pygmentizecounter}
 \newcommand{\minted@pygmentize}[2][\minted@outputdir\minted@jobname.pyg]{%
+  \minted@checklexer{#2}%
   \minted@checkstyle{\minted@get@opt{style}{default}}%
   \stepcounter{minted@pygmentizecounter}%
   \ifthenelse{\equal{\minted@get@opt{autogobble}{false}}{true}}%
@@ -764,7 +782,7 @@
         \detokenize{for /f "usebackq tokens=*"}\space\@percentchar\detokenize{a in (`kpsewhich}\space\minted@codefile\detokenize{`) do}\space
       \fi
     \fi
-    \MintedPygmentize\space -l #2
+    \MintedPygmentize\space -l \minted@lexer\space
     -f latex -P commandprefix=PYG -F tokenmerge
     \minted@optlistcl@g \csname minted@optlistcl@lang\minted@lang\endcsname
     \minted@optlistcl@inlines
